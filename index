@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="bg">
+<head>
+  <meta charset="UTF-8" />
+  <title>Касиерски калкулатор: Цена на продукт, Сума от клиента, Ресто (BGN/EUR)</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      --bg: #0b1020;
+      --panel: #141a2b;
+      --card: #161b2e;
+      --fg: #e5e7eb;
+      --muted: #a3a3a3;
+      --primary: #4f46e5;
+      --accent: #10b981;
+      --border: #2b3150;
+      --green: #10b981;
+      --red: #ef4444;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto; background: linear-gradient(135deg, #0b1020 0%, #141a2b 60%); color: var(--fg); padding: 20px; }
+    .container { max-width: 1100px; margin: 0 auto; display: grid; grid-template-columns: 1.05fr 0.95fr; gap: 16px; align-items: stretch; }
+    @media (max-width: 900px) { .container { grid-template-columns: 1fr; } }
+
+    .card { background: rgba(20,26,46,.95); border: 1px solid var(--border); border-radius: 12px; padding: 16px; box-shadow: 0 6px 20px rgba(0,0,0,.25); }
+
+    h2 { margin: 0 0 8px; font-size: 1.15rem; letter-spacing: .2px; }
+    .row { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+    .col { flex: 1 1 320px; min-width: 240px; }
+    label { display: block; font-weight: 600; margin-bottom: 6px; color: #e2e8f0; }
+    input[type="number"], input[type="text"] { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid var(--border); background: #0f162b; color: #fff; }
+    select { width: 100%; padding: 12px; font-size: 1rem; border-radius: 8px; border: 1px solid var(--border); background: #0f162b; color: #fff; }
+    .tile { padding: 12px; border-radius: 8px; border: 1px solid var(--border); background: #0e132a; }
+    .tile h3 { margin: 0 0 6px; font-size: 0.95rem; color: #d9e4ff; }
+    .value { font-size: 1.5rem; font-weight: 700; letter-spacing: .5px; }
+    .note { font-size: .85rem; color: var(--muted); margin-top: 6px; }
+
+    .section-title { margin: 6px 0 12px; font-size: 0.95rem; color: #cbd5e1; text-transform: uppercase; letter-spacing: .8px; }
+
+    .btn { padding: 12px 16px; border-radius: 8px; border: 0; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
+    .btn.secondary { background: #1f2a5c; }
+    .btn.ghost { background: transparent; color: #e2e8f0; border: 1px solid var(--border); }
+  </style>
+</head>
+<body>
+  <div class="container" aria-label="Касиерски калкулатор">
+    <!-- Лява част: вход за цена на продукта -->
+    <section class="card" aria-label="Цена на продукта">
+      <h2>Цена на продукта</h2>
+      <div class="row">
+        <div class="col">
+          <label for="unitPrice">Цена на продукта (в избрана валута)</label>
+          <input type="number" id="unitPrice" min="0" step="0.01" value="0" placeholder="Въведете цена" />
+        </div>
+        <div class="col">
+          <label for="priceCurrency">Валута на цената</label>
+          <select id="priceCurrency" aria-label="Валута на цената">
+            <option value="BGN" selected>BGN</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+        <div class="col">
+          <label for="tax">Данък (опционално)</label>
+          <input type="number" id="tax" min="0" step="0.01" value="0" placeholder="Данък %" />
+          <div class="note">Ако желаете, може да добавите данък върху цената.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Дясна част: сума от клиента и ресто -->
+    <section class="card" aria-label="Сума от клиента и ресто">
+      <h2>Сума от клиента и ресто</h2>
+
+      <div class="row" style="align-items:flex-end;">
+        <div class="col">
+          <label for="amountFromClient">Сума, платена от клиента</label>
+          <input type="number" id="amountFromClient" min="0" step="0.01" value="0" placeholder="Въведете сума" />
+        </div>
+
+        <div class="col">
+          <label for="clientCurrency">Валута на платената сума</label>
+          <select id="clientCurrency" aria-label="Валута на платената сума">
+            <option value="BGN" selected>BGN</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <div class="col" style="flex:1 1 320px;">
+          <label>Показване на курсове (за конверсия)</label>
+          <div class="row" style="gap:8px;">
+            <div class="tile" style="flex:1 1 auto;">
+              <div class="note" style="margin:0 0 4px;">Курс EUR→BGN</div>
+              <div class="value" id="rateDisplay">1 EUR = 1.95583 BGN</div>
+            </div>
+            <div class="tile" style="width:180px;">
+              <div class="note" style="margin:0 0 4px;">Курс BGН→EUR</div>
+              <div class="value" id="rateReverseDisplay">1 BGN = 0.5100 EUR</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="row" style="margin-top:12px;">
+        <button class="btn" id="calcBtn" aria-label="Изчисли ресто">ИЗЧИСЛИ</button>
+        <button class="btn secondary" id="resetAll" aria-label="Нулиране">Нулирай</button>
+      </div>
+    </section>
+
+    <!-- Резултати: Ресто в двете валути -->
+    <section class="card" aria-label="Ресто">
+      <div class="section-title">Ресто</div>
+      <div class="row" style="gap:12px;">
+        <div class="tile" style="flex:1 1 320px;">
+          <h3>Ресто в BGN</h3>
+          <div class="value" id="changeBGN">0.00 лв</div>
+          <div class="note" id="noteBGN">Детайли: цена + Данък → обща стойност</div>
+        </div>
+        <div class="tile" style="flex:1 1 320px;">
+          <h3>Ресто в EUR</h3>
+          <div class="value" id="changeEUR">0.00 EUR</div>
+          <div class="note" id="noteEUR2">Детайли: обща стойност в EUR</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    // Касиерски калкулатор с две валути и ресто
+    // Входни полета
+    const unitPrice = document.getElementById('unitPrice');
+    const priceCurrency = document.getElementById('priceCurrency');
+    const amountFromClient = document.getElementById('amountFromClient');
+    const clientCurrency = document.getElementById('clientCurrency');
+    const taxInput = document.getElementById('tax');
+    const calcBtn = document.getElementById('calcBtn');
+    const resetAll = document.getElementById('resetAll');
+
+    // За курсове и ресто
+    const rateDisplay = document.getElementById('rateDisplay');
+    const rateReverseDisplay = document.getElementById('rateReverseDisplay');
+    // Резултати
+    const changeBGN = document.getElementById('changeBGN');
+    const changeEUR = document.getElementById('changeEUR');
+    const noteBGN = document.getElementById('noteBGN');
+    const noteEUR2 = document.getElementById('noteEUR2');
+
+    // По-лесно: дефолтен курс EUR→BGN (примерен, клиент може да го промени)
+    // Може да се обновява чрез API при нужда.
+    let eurToBgn = 1.95583; // EUR → BGN
+    let bgnToEur = 1 / eurToBgn; // BGN → EUR
+
+    function format(n, unit) {
+      return new Intl.NumberFormat('bg-BG', { style: 'currency', currency: unit }).format(n);
+    }
+
+    function compute() {
+      // Цена на продукта без данък
+      const price = parseFloat(unitPrice.value) || 0;
+      const taxPct = parseFloat(taxInput.value) || 0;
+      const priceWithTax = price * (1 + taxPct / 100);
+
+      // Валута на цена
+      const priceInBGN = priceCurrency.value === 'BGN' ? priceWithTax : priceWithTax * eurToBgn; // ако цена в EUR, конвертирам към BGN
+      const priceInEUR = priceCurrency.value === 'EUR' ? priceWithTax : priceWithTax * bgnToEur; // ако цена в BGN, конвертирам към EUR
+
+      // Сума от клиента
+      const paid = parseFloat(amountFromClient.value) || 0;
+      const paidInBGN = clientCurrency.value === 'BGN' ? paid : paid * eurToBgn;
+      const paidInEUR = clientCurrency.value === 'EUR' ? paid : paid * bgnToEur;
+
+      // Ресто в двете валути: ресто = платена - обща сума
+      // Общата сума в BGН и EUR
+      // Тук използваме стойностите priceInBGN / priceInEUR като общи стойности за съответните валути
+      const totalBGN = priceInBGN;
+      const totalEUR = priceInEUR;
+
+      // Ресто: разлика между платена сума в една валута и общата сума в тази валута
+      // Трябва да конвертираме платеното към валутата на ресто
+      // За простота, изчисляваме ресто в двете валути:
+      const changeBGNVal = paidInBGN - totalBGN;
+      const changeEURVal = paidInEUR - totalEUR;
+
+      // Ако са отрицателни (липсва достатъчно плащане), показваме като negativo
+      changeBGN.textContent = format(Math.max(0, changeBGNVal), 'BGN');
+      changeEUR.textContent = format(Math.max(0, changeEURVal), 'EUR');
+
+      // Описание (не задължително)
+      noteBGN.textContent = `Платено: ${paidInBGN.toFixed(2)} BGN; Общo: ${totalBGN.toFixed(2)} BGN`;
+      noteEUR2.textContent = `Платено: ${paidInEUR.toFixed(2)} EUR; Общo: ${totalEUR.toFixed(2)} EUR`;
+    }
+
+    // Добавяме обработчици
+    calcBtn.addEventListener('click', compute);
+    resetAll.addEventListener('click', () => {
+      unitPrice.value = '0';
+      priceCurrency.value = 'BGN';
+      amountFromClient.value = '0';
+      clientCurrency.value = 'BGN';
+      taxInput.value = '0';
+      compute();
+    });
+
+    // Прешъкт: обновяваме дисплея на курсовете
+    function updateRateDisplays() {
+      rateDisplay.textContent = `1 EUR = ${eurToBgn.toFixed(5)} BGN`;
+      rateReverseDisplay.textContent = `1 BGN = ${(bgnToEur).toFixed(5)} EUR`;
+    }
+
+    // Пример за инициализация
+    updateRateDisplays();
+    compute();
+
+    // Ако желаете, добавете API за автоматично обновяване на курсовете:
+    // fetch('https://api.exchangerate.host/latest?base=EUR&symbols=BGN')
+    //   .then(r => r.json())
+    //   .then(d => {
+    //     if (d && d.rates && d.rates.BGN) {
+    //       eurToBgn = d.rates.BGN;
+    //       bgnToEur = 1 / eurToBgn;
+    //       updateRateDisplays();
+    //     }
+    //   });
+  </script>
+</body>
+</html>
